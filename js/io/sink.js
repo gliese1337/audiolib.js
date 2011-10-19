@@ -463,6 +463,60 @@ sinks('webkit', function(readFn, channelCount, preBufferSize, sampleRate){
 });
 
 /**
+ * A sink class for WAV data URLs
+*/
+sinks('wav', function(readFn, channelCount, preBufferSize, sampleRate){
+	var	self			= this,
+		soundData		= new Float32Array(1024*channelCount),
+		audio 			= {
+			samples:0,
+			nextDevice:null,
+			curDevice:null
+		};
+	self.start.apply(self, arguments);
+	// TODO: All sampleRate & preBufferSize combinations don't work quite like expected, fix this.
+	self.preBufferSize = preBufferSize = isNaN(arguments[2]) ? self.sampleRate / 2 : preBufferSize;
+	
+	function nextClip(){
+		audio.curDevice = nextDevice;
+		audio.nextDevice = null;
+		audio.curDevice.play();
+	}
+	
+	function incSamples(){
+		audio.samples += 1024;
+		nextClip();
+	}
+	
+	function bufferFill(){
+		if(nextDevice){return;}
+		self.process(soundData, self.channelCount);
+		audio.nextDevice = new Audio( 'data:audio/wav;base64,'+btoa(
+			audioLib.PCMData.encode({
+				data:		soundData,
+				sampleRate:	sampleRate,
+				channelCount:	channelCount,
+				bytesPerSample:	4 //32-bit floats
+			})
+		));
+		if(audio.curDevice){
+			audio.curDevice.addEventListener("ended",incSamples,true);
+		}else{
+			nextClip();
+		}
+	}
+	
+	self.kill = Sink.doInterval(bufferFill, 40);
+	self._bufferFill	= bufferFill;
+	self._audio = audio;
+}, {
+	getPlaybackTime: function(){
+		var audio = this._audio;
+		return (audio.curDevice?audio.cureDevice.currentTime*this.sampleRate:0)+audio.samples;
+	}
+});
+
+/**
  * A dummy Sink. (No output)
 */
 
