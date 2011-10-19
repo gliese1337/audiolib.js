@@ -428,6 +428,7 @@ sinks('webkit', function(readFn, channelCount, preBufferSize, sampleRate){
 			i, n, l		= outputBuffer.length,
 			size		= outputBuffer.size,
 			channels	= new Array(channelCount),
+			channel,
 			soundData	= new Float32Array(l * channelCount);
 
 		for (i=0; i<channelCount; i++){
@@ -436,9 +437,10 @@ sinks('webkit', function(readFn, channelCount, preBufferSize, sampleRate){
 
 		self.process(soundData, self.channelCount);
 
-		for (i=0; i<l; i++){
-			for (n=0; n < channelCount; n++){
-				channels[n][i] = soundData[i * self.channelCount + n];
+		for (i=0; i < channelCount; i++){
+			channel = channels[i];
+			for (n=0; n<l; n++){
+				channel[n] = soundData[n * self.channelCount + i];
 			}
 		}
 	}
